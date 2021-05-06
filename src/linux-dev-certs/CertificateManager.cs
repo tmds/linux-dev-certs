@@ -8,8 +8,10 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
-namespace linux_dev_certs
+namespace LinuxDevCerts
 {
+    using static ProcessHelper;
+
     internal enum CertificateKeyExportFormat
     {
         Pfx,
@@ -192,7 +194,7 @@ namespace linux_dev_certs
             }
         }
 
-        internal X509Certificate2 CreateAspNetCoreHttpsDevelopmentCertificate(DateTimeOffset notBefore, DateTimeOffset notAfter)
+        internal X509Certificate2 CreateAspNetCoreHttpsDevelopmentCertificate(DateTimeOffset notBefore, DateTimeOffset notAfter, X509Certificate2 issuerCert)
         {
             var subject = new X500DistinguishedName(Subject);
             var extensions = new List<X509Extension>();
@@ -238,17 +240,19 @@ namespace linux_dev_certs
             extensions.Add(sanBuilder.Build(critical: true));
             extensions.Add(aspNetHttpsExtension);
 
-            var certificate = CreateSelfSignedCertificate(subject, extensions, notBefore, notAfter);
+            var certificate = CreateCertificate(subject, extensions, notBefore, notAfter, RSAMinimumKeySizeInBits, issuerCert);
             return certificate;
         }
 
-        internal X509Certificate2 CreateSelfSignedCertificate(
+        static internal X509Certificate2 CreateCertificate(
             X500DistinguishedName subject,
             IEnumerable<X509Extension> extensions,
             DateTimeOffset notBefore,
-            DateTimeOffset notAfter)
+            DateTimeOffset notAfter,
+            int minimumKeySize,
+            X509Certificate2 issuerCert)
         {
-            using var key = CreateKeyMaterial(RSAMinimumKeySizeInBits);
+            using var key = CreateKeyMaterial(minimumKeySize);
 
             var request = new CertificateRequest(subject, key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
             foreach (var extension in extensions)
@@ -256,8 +260,10 @@ namespace linux_dev_certs
                 request.CertificateExtensions.Add(extension);
             }
 
-            var result = request.CreateSelfSigned(notBefore, notAfter);
-            return result;
+            var result = issuerCert == null ? request.CreateSelfSigned(notBefore, notAfter) :
+                                    request.Create(issuerCert, notBefore, notAfter, Guid.NewGuid().ToByteArray());
+
+            return result.HasPrivateKey ? result : result.CopyWithPrivateKey(key);
 
             RSA CreateKeyMaterial(int minimumKeySize)
             {
@@ -269,6 +275,67 @@ namespace linux_dev_certs
 
                 return rsa;
             }
+        }
+
+        // -- code above was taken from aspnetcore and slightly modified.
+
+        internal void InstallAndTrust()
+        {
+            Console.WriteLine("Removing all existing certificates.");
+            Execute("dotnet", "dev-certs", "https", "--clean");
+
+            Console.WriteLine("Creating CA certificate.");
+            var caCert = CreateAspNetDevelopmentCACertificate(DateTime.UtcNow, DateTime.UtcNow.AddYears(10));
+
+            Console.WriteLine("Installing CA certificate.");
+            char[] caCertPem = PemEncoding.Write("CERTIFICATE", caCert.Export(X509ContentType.Cert));
+            string certFolder = "/etc/pki/ca-trust/source/anchors/";
+            string username = Environment.UserName;
+            string certFileName = $"aspnet-{username}.pem";
+            SudoExecute(new[] { "tee", Path.Combine(certFolder, certFileName)}, caCertPem);
+            SudoExecute("update-ca-trust", "extract");
+
+            Console.WriteLine("Creating development certificate.");
+            var devCert = CreateAspNetCoreHttpsDevelopmentCertificate(DateTime.UtcNow, DateTime.UtcNow.AddYears(1), caCert);
+            Console.WriteLine("Installing development certificate.");
+            SaveCertificateCore(devCert);
+        }
+
+        private static bool IsInstalled(string program)
+        {
+            string pathEnvVar = Environment.GetEnvironmentVariable("PATH");
+            if (pathEnvVar != null)
+            {
+                foreach (var subPath in pathEnvVar.Split(':', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private const string LocalhostCASubject = "O=ASP.NET Core dev CA";
+        public const int RsaCACertMinimumKeySizeInBits = 2048;
+
+        private X509Certificate2 CreateAspNetDevelopmentCACertificate(DateTimeOffset notBefore, DateTimeOffset notAfter)
+        {
+            string certOwner = $"{Environment.UserName}@{Environment.MachineName}";
+            string distinguishedName = $"{LocalhostCASubject},OU={certOwner}";
+            var subject = new X500DistinguishedName(distinguishedName);
+
+            var keyUsage = new X509KeyUsageExtension(X509KeyUsageFlags.KeyCertSign, critical: true);
+
+            var basicConstraints = new X509BasicConstraintsExtension(
+                certificateAuthority: true,
+                hasPathLengthConstraint: true,
+                pathLengthConstraint: 1,
+                critical: true);
+
+            var extensions = new List<X509Extension>();
+            extensions.Add(basicConstraints);
+            extensions.Add(keyUsage);
+
+            return CreateCertificate(subject, extensions, notBefore, notAfter, RsaCACertMinimumKeySizeInBits, issuerCert: null /* self-signed */);
         }
     }
 }
