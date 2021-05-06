@@ -45,9 +45,7 @@ namespace LinuxDevCerts
             process.BeginOutputReadLine();
             if (input != null)
             {
-                // process.StandardInput.Write(input);
-                process.StandardInput.BaseStream.Write(Encoding.ASCII.GetBytes(input));
-                process.StandardInput.BaseStream.Flush();
+                process.StandardInput.Write(input);
             }
             process.StandardInput.Close();
             process.WaitForExit();

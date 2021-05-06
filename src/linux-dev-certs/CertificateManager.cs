@@ -301,19 +301,6 @@ namespace LinuxDevCerts
             SaveCertificateCore(devCert);
         }
 
-        private static bool IsInstalled(string program)
-        {
-            string pathEnvVar = Environment.GetEnvironmentVariable("PATH");
-            if (pathEnvVar != null)
-            {
-                foreach (var subPath in pathEnvVar.Split(':', StringSplitOptions.RemoveEmptyEntries))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
         private const string LocalhostCASubject = "O=ASP.NET Core dev CA";
         public const int RsaCACertMinimumKeySizeInBits = 2048;
 
