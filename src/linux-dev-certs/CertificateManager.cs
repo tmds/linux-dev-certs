@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using static LinuxDevCerts.ProcessHelper;
@@ -9,9 +10,12 @@ partial class CertificateManager
     private const string LocalhostCASubject = "O=ASP.NET Core dev CA";
     public const int RsaCACertMinimumKeySizeInBits = RSAMinimumKeySizeInBits;
 
+    private const string FedoraFamilyCaSourceDirectory = "/etc/pki/ca-trust/source/anchors";
+    private const string DebianFamilyCaSourceDirectory = "/usr/local/share/ca-certificates";
+
     private X509Certificate2? _caCertificate;
 
-    internal void InstallAndTrust()
+    public void InstallAndTrust()
     {
         Console.WriteLine("Removing all existing certificates.");
         Execute("dotnet", "dev-certs", "https", "--clean");
@@ -20,17 +24,40 @@ partial class CertificateManager
         _caCertificate = CreateAspNetDevelopmentCACertificate(DateTime.UtcNow, DateTime.UtcNow.AddYears(10));
 
         Console.WriteLine("Installing CA certificate.");
-        char[] caCertPem = PemEncoding.Write("CERTIFICATE", _caCertificate.Export(X509ContentType.Cert));
-        string certFolder = "/etc/pki/ca-trust/source/anchors/";
-        string username = Environment.UserName;
-        string certFileName = $"aspnet-{username}.pem";
-        SudoExecute(new[] { "tee", Path.Combine(certFolder, certFileName) }, caCertPem);
-        SudoExecute("update-ca-trust", "extract");
+        InstallCaCertificate(_caCertificate);
 
         Console.WriteLine("Creating development certificate.");
         var devCert = CreateAspNetCoreHttpsDevelopmentCertificate(DateTime.UtcNow, DateTime.UtcNow.AddYears(1));
         Console.WriteLine("Installing development certificate.");
         SaveCertificateCore(devCert, StoreName.My, StoreLocation.CurrentUser);
+    }
+
+    private static void InstallCaCertificate(X509Certificate2 caCertificate)
+    {
+        // Only the public key is stored.
+        // The private key will only exist in the memory of this program
+        // and no other certificates can be signed with it after the program terminates.
+        char[] caCertPem = PemEncoding.Write("CERTIFICATE", caCertificate.Export(X509ContentType.Cert));
+        string username = Environment.UserName;
+        string fileNameWithoutExtension = $"aspnet-{username}";
+        string certFilePath;
+        string[] trustCommand;
+        if (Directory.Exists(FedoraFamilyCaSourceDirectory))
+        {
+            certFilePath = $"{FedoraFamilyCaSourceDirectory}/{fileNameWithoutExtension}.pem";
+            trustCommand = [ "update-ca-trust", "extract" ];
+        }
+        else if (Directory.Exists(DebianFamilyCaSourceDirectory))
+        {
+            certFilePath = $"{DebianFamilyCaSourceDirectory}/{fileNameWithoutExtension}.crt";
+            trustCommand = [ "update-ca-certificates" ];
+        }
+        else
+        {
+            throw new NotSupportedException($"Can not determine location to install CA certificate on {RuntimeInformation.OSDescription}.");
+        }
+        SudoExecute(new[] { "tee", certFilePath }, caCertPem);
+        SudoExecute(trustCommand);
     }
 
     // Creates a cert issued by _caCertificate.
