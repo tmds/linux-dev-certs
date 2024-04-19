@@ -13,7 +13,7 @@ dotnet tool update -g linux-dev-certs --prerelease --add-source https://www.myge
 
 Run it:
 ```
-dotnet linux-dev-certs
+dotnet linux-dev-certs install
 ```
 
 # Supported distros

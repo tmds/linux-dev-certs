@@ -17,7 +17,7 @@ partial class CertificateManager
 
     public void InstallAndTrust()
     {
-        Console.WriteLine("Removing all existing certificates.");
+        Console.WriteLine("Removing existing development certificates.");
         Execute("dotnet", "dev-certs", "https", "--clean");
 
         Console.WriteLine("Creating CA certificate.");
