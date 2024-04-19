@@ -1,16 +1,12 @@
-﻿using System;
-
-namespace LinuxDevCerts
+﻿if (!OperatingSystem.IsLinux())
 {
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            Console.WriteLine("Some operations require root. You may be prompted for your 'sudo' password.");
-            Console.WriteLine();
-
-            var certManager = new CertificateManager();
-            certManager.InstallAndTrust();
-        }
-    }
+    Console.Error.WriteLine("This tool is for installing ASP.NET Core developer certificates on Linux.");
+    return 1;
 }
+
+Console.WriteLine("Some operations require root. You may be prompted for your 'sudo' password.");
+Console.WriteLine();
+
+var certManager = new LinuxDevCerts.CertificateManager();
+certManager.InstallAndTrust();
+return 0;

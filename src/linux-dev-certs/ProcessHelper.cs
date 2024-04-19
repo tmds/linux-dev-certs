@@ -6,7 +6,7 @@ namespace LinuxDevCerts
 {
     static class ProcessHelper
     {
-        public static void SudoExecute(string[] arguments, char[] input = null)
+        public static void SudoExecute(string[] arguments, char[]? input = null)
             => Execute(arguments, input, sudo: true);
 
         public static void SudoExecute(params string[] arguments)
@@ -15,7 +15,7 @@ namespace LinuxDevCerts
         public static void Execute(params string[] arguments)
             => Execute(arguments, input: null, sudo: false);
 
-        public static void Execute(string[] arguments, char[] input = null, bool sudo = false)
+        public static void Execute(string[] arguments, char[]? input = null, bool sudo = false)
         {
             Process process = new Process()
             {
