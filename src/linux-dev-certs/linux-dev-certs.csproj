@@ -5,6 +5,16 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RollForward>Major</RollForward>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>dotnet-linux-dev-certs</ToolCommandName>
+    <AssemblyName>dotnet-linux-dev-certs</AssemblyName>
+    <PackageId>linux-dev-certs</PackageId>
+    <PackageType>DotnetCliTool</PackageType>
+    <Authors>Tom Deseyn</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Copyright>Tom Deseyn</Copyright>
+    <Description>Tool to install ASP.NET Core developer certificates on Linux.</Description>
   </PropertyGroup>
 
 </Project>
