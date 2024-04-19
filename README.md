@@ -22,7 +22,7 @@ dotnet linux-dev-certs install
 - Debian and derived (Ubuntu, ...)
 
 Limitations:
-- Ubuntu provides browser applications as snaps. These snaps do not use the system certificate store (https://bugs.launchpad.net/ubuntu/+source/chromium-browser/+bug/1901586). For .NET itself and CLI applications on the system the developer certificate will be trusted. For the browsers, the user still needs manually accept the developer certificate.
+- Ubuntu provides browser applications as snaps. These snaps do not use the system certificate store (https://bugs.launchpad.net/ubuntu/+source/chromium-browser/+bug/1901586). For .NET itself and CLI applications the development certificate will be trusted. For browsers, the user still needs manually accept the development certificate.
 
 # How it works
 
