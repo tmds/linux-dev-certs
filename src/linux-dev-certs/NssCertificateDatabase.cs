@@ -41,4 +41,25 @@ internal class NssCertificateDatabase : ICertificateStore
             { }
         }
     }
+
+    public void AddDependencies(HashSet<Dependency> dependencies)
+    {
+        dependencies.Add(new Dependency("certutil", GetPackageForCertUtils()));
+    }
+
+    private string GetPackageForCertUtils()
+    {
+        if (OSFlavor.IsFedoraLike)
+        {
+            return "nss-tools";
+        }
+        else if (OSFlavor.IsDebianLike)
+        {
+            return "libnss3-tools";
+        }
+        else
+        {
+            throw new NotSupportedException();
+        }
+    }
 }
