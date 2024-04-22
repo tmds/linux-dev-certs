@@ -1,4 +1,3 @@
-using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -11,39 +10,130 @@ partial class CertificateManager
     private const string LocalhostCASubject = "O=ASP.NET Core dev CA";
     public const int RsaCACertMinimumKeySizeInBits = RSAMinimumKeySizeInBits;
 
-    private const string FedoraFamilyCaSourceDirectory = "/etc/pki/ca-trust/source/anchors";
-    private const string DebianFamilyCaSourceDirectory = "/usr/local/share/ca-certificates";
-
     private X509Certificate2? _caCertificate;
 
-    public void InstallAndTrust()
+    public bool InstallAndTrust()
     {
+        if (Environment.IsPrivilegedProcess)
+        {
+            Console.Error.WriteLine("The tool is running with elevated privileges. You should run under the user account of the developer.");
+            return false;
+        }
         string username = Environment.UserName;
-        string certificateName = $"aspnet-dev-{username}";
+        string certificateId = $"aspnet-dev-{username}";
 
-        Console.WriteLine("Removing existing development certificates.");
-        Execute("dotnet", "dev-certs", "https", "--clean");
+        SystemCertificateStore systemCertStore = new();
+        if (!systemCertStore.IsSupported)
+        {
+            Console.Error.WriteLine($"Can not determine location to install CA certificate on {RuntimeInformation.OSDescription}.");
+            return false;
+        }
+        var additionalStores = FindAdditionaCertificateStores();
+
+        if (!CheckDependencies(systemCertStore, additionalStores))
+        {
+            return false;
+        }
+
+        ConsoleColor color = Console.ForegroundColor;
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("Some operations require root. You may be prompted for your 'sudo' password.");
+        Console.ForegroundColor = color;
 
         Console.WriteLine("Creating CA certificate.");
         _caCertificate = CreateAspNetDevelopmentCACertificate(DateTime.UtcNow, DateTime.UtcNow.AddYears(10));
 
         Console.WriteLine("Installing CA certificate.");
-        InstallCaCertificate(certificateName, _caCertificate);
+        if (!systemCertStore.TryInstallCertificate(certificateId, _caCertificate))
+        {
+            Console.Error.WriteLine("Failed to install certificate.");
+            return false;
+        }
 
+        Console.WriteLine("Removing existing development certificates.");
+        Execute("dotnet", "dev-certs", "https", "--clean");
         Console.WriteLine("Creating development certificate.");
         var devCert = CreateAspNetCoreHttpsDevelopmentCertificate(DateTime.UtcNow, DateTime.UtcNow.AddYears(1));
         Console.WriteLine("Installing development certificate.");
         devCert = SaveCertificateCore(devCert, StoreName.My, StoreLocation.CurrentUser);
 
-        var additionalStores = FindAdditionaCertificateStores();
+        bool isSuccess = true;
         foreach (ICertificateStore store in additionalStores)
         {
             Console.WriteLine($"Installing CA certificate to {store.Name}.");
-            if (!store.TryInstallCertificate(certificateName, devCert))
+            if (!store.TryInstallCertificate(certificateId, devCert))
             {
+                isSuccess = false;
                 Console.Error.WriteLine("Failed to install certificate.");
             }
         }
+        return isSuccess;
+    }
+
+    private bool CheckDependencies(SystemCertificateStore systemCertStore, List<ICertificateStore> additionalStores)
+    {
+        // Find all dependencies.
+        HashSet<Dependency> dependencies = new();
+        systemCertStore.AddDependencies(dependencies);
+        foreach (ICertificateStore store in additionalStores)
+        {
+            store.AddDependencies(dependencies);
+        }
+
+        // Remove dependencies that are met.
+        HashSet<Dependency> unmetDependencies = new();
+        string pathEnvVar = Environment.GetEnvironmentVariable("PATH") ?? "";
+        string[] paths = pathEnvVar.Split(':');
+        foreach (var dependency in dependencies)
+        {
+            bool found = false;
+            foreach (var path in paths)
+            {
+                string filename = Path.Combine(path, dependency.ProgramName);
+                if (File.Exists(filename))
+                {
+                    found = true;
+                }
+            }
+            if (!found)
+            {
+                unmetDependencies.Add(dependency);
+            }
+        }
+
+        if (unmetDependencies.Count == 0)
+        {
+            return true;
+        }
+
+        // Find the package names.
+        HashSet<string> packagesToInstall = unmetDependencies.Select(dep => dep.PackageName).ToHashSet();
+
+        ConsoleColor color = Console.ForegroundColor;
+
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.Error.WriteLine($"There are missing dependencies.");
+
+        Console.ForegroundColor = color;
+        Console.Error.WriteLine("You can install them by using the following command:");
+
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        if (OSFlavor.IsFedoraLike)
+        {
+            Console.Error.WriteLine($"    dnf install {string.Join(", ", packagesToInstall)}");
+        }
+        else if (OSFlavor.IsDebianLike)
+        {
+            Console.Error.WriteLine($"    apt-get install {string.Join(", ", packagesToInstall)}");
+        }
+        else
+        {
+            Console.ForegroundColor = color;
+            OSFlavor.ThrowNotSupported();
+        }
+        Console.ForegroundColor = color;
+
+        return false;
     }
 
     private List<ICertificateStore> FindAdditionaCertificateStores()
@@ -61,32 +151,6 @@ partial class CertificateManager
         }
 
         return stores;
-    }
-
-    private static void InstallCaCertificate(string name, X509Certificate2 caCertificate)
-    {
-        // Only the public key is stored.
-        // The private key will only exist in the memory of this program
-        // and no other certificates can be signed with it after the program terminates.
-        char[] caCertPem = PemEncoding.Write("CERTIFICATE", caCertificate.Export(X509ContentType.Cert));
-        string certFilePath;
-        string[] trustCommand;
-        if (Directory.Exists(FedoraFamilyCaSourceDirectory))
-        {
-            certFilePath = $"{FedoraFamilyCaSourceDirectory}/{name}.pem";
-            trustCommand = ["update-ca-trust", "extract"];
-        }
-        else if (Directory.Exists(DebianFamilyCaSourceDirectory))
-        {
-            certFilePath = $"{DebianFamilyCaSourceDirectory}/{name}.crt";
-            trustCommand = ["update-ca-certificates"];
-        }
-        else
-        {
-            throw new NotSupportedException($"Can not determine location to install CA certificate on {RuntimeInformation.OSDescription}.");
-        }
-        SudoExecute(new[] { "tee", certFilePath }, caCertPem);
-        SudoExecute(trustCommand);
     }
 
     // Creates a cert issued by _caCertificate.
