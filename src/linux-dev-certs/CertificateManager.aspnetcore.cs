@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -90,4 +92,156 @@ partial class CertificateManager
 
         return certificate;
     }
+
+    // Copied from aspnetcore CertificateManager.cs
+    internal static void ExportCertificate(X509Certificate2 certificate, string path, bool includePrivateKey, string? password, CertificateKeyExportFormat format)
+    {
+        // if (Log.IsEnabled())
+        // {
+        //     Log.ExportCertificateStart(GetDescription(certificate), path, includePrivateKey);
+        // }
+
+        // if (includePrivateKey && password == null)
+        // {
+        //     Log.NoPasswordForCertificate();
+        // }
+
+        var targetDirectoryPath = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(targetDirectoryPath))
+        {
+            // Log.CreateExportCertificateDirectory(targetDirectoryPath);
+            Directory.CreateDirectory(targetDirectoryPath);
+        }
+
+        byte[] bytes;
+        byte[] keyBytes;
+        byte[]? pemEnvelope = null;
+        RSA? key = null;
+
+        try
+        {
+            if (includePrivateKey)
+            {
+                switch (format)
+                {
+                    case CertificateKeyExportFormat.Pfx:
+                        bytes = certificate.Export(X509ContentType.Pkcs12, password);
+                        break;
+                    case CertificateKeyExportFormat.Pem:
+                        key = certificate.GetRSAPrivateKey()!;
+
+                        char[] pem;
+                        if (password != null)
+                        {
+                            keyBytes = key.ExportEncryptedPkcs8PrivateKey(password, new PbeParameters(PbeEncryptionAlgorithm.Aes256Cbc, HashAlgorithmName.SHA256, 100000));
+                            pem = PemEncoding.Write("ENCRYPTED PRIVATE KEY", keyBytes);
+                            pemEnvelope = Encoding.ASCII.GetBytes(pem);
+                        }
+                        else
+                        {
+                            // Export the key first to an encrypted PEM to avoid issues with System.Security.Cryptography.Cng indicating that the operation is not supported.
+                            // This is likely by design to avoid exporting the key by mistake.
+                            // To bypass it, we export the certificate to pem temporarily and then we import it and export it as unprotected PEM.
+                            keyBytes = key.ExportEncryptedPkcs8PrivateKey(string.Empty, new PbeParameters(PbeEncryptionAlgorithm.Aes256Cbc, HashAlgorithmName.SHA256, 1));
+                            pem = PemEncoding.Write("ENCRYPTED PRIVATE KEY", keyBytes);
+                            key.Dispose();
+                            key = RSA.Create();
+                            key.ImportFromEncryptedPem(pem, string.Empty);
+                            Array.Clear(keyBytes, 0, keyBytes.Length);
+                            Array.Clear(pem, 0, pem.Length);
+                            keyBytes = key.ExportPkcs8PrivateKey();
+                            pem = PemEncoding.Write("PRIVATE KEY", keyBytes);
+                            pemEnvelope = Encoding.ASCII.GetBytes(pem);
+                        }
+
+                        Array.Clear(keyBytes, 0, keyBytes.Length);
+                        Array.Clear(pem, 0, pem.Length);
+
+                        bytes = Encoding.ASCII.GetBytes(PemEncoding.Write("CERTIFICATE", certificate.Export(X509ContentType.Cert)));
+                        break;
+                    default:
+                        throw new InvalidOperationException("Unknown format.");
+                }
+            }
+            else
+            {
+                if (format == CertificateKeyExportFormat.Pem)
+                {
+                    bytes = Encoding.ASCII.GetBytes(PemEncoding.Write("CERTIFICATE", certificate.Export(X509ContentType.Cert)));
+                }
+                else
+                {
+                    bytes = certificate.Export(X509ContentType.Cert);
+                }
+            }
+        }
+        // catch (Exception e) when (Log.IsEnabled())
+        // {
+        //     Log.ExportCertificateError(e.ToString());
+        //     throw;
+        // }
+        finally
+        {
+            key?.Dispose();
+        }
+
+        try
+        {
+            // Log.WriteCertificateToDisk(path);
+
+            // Create a temp file with the correct Unix file mode before moving it to the expected path.
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                var tempFilename = Path.GetTempFileName();
+                File.Move(tempFilename, path, overwrite: true);
+            }
+
+            File.WriteAllBytes(path, bytes);
+        }
+        // catch (Exception ex) when (Log.IsEnabled())
+        // {
+        //     Log.WriteCertificateToDiskError(ex.ToString());
+        //     throw;
+        // }
+        finally
+        {
+            Array.Clear(bytes, 0, bytes.Length);
+        }
+
+        if (includePrivateKey && format == CertificateKeyExportFormat.Pem)
+        {
+            Debug.Assert(pemEnvelope != null);
+
+            try
+            {
+                var keyPath = Path.ChangeExtension(path, ".key");
+                // Log.WritePemKeyToDisk(keyPath);
+
+                // Create a temp file with the correct Unix file mode before moving it to the expected path.
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    var tempFilename = Path.GetTempFileName();
+                    File.Move(tempFilename, keyPath, overwrite: true);
+                }
+
+                File.WriteAllBytes(keyPath, pemEnvelope);
+            }
+            // catch (Exception ex) when (Log.IsEnabled())
+            // {
+            //     Log.WritePemKeyToDiskError(ex.ToString());
+            //     throw;
+            // }
+            finally
+            {
+                Array.Clear(pemEnvelope, 0, pemEnvelope.Length);
+            }
+        }
+    }
+}
+
+// Copied from aspnetcore CertificateExportFormat.cs
+internal enum CertificateKeyExportFormat
+{
+    Pfx,
+    Pem,
 }

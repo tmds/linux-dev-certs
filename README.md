@@ -18,11 +18,11 @@ dotnet linux-dev-certs install
 
 # Supported distros
 
-- Fedora and derived (RHEL, Rocky, ...)
+- Fedora and derived (RHEL, AlmaLinux, ...)
 - Debian and derived (Ubuntu, ...)
 
 Limitations:
-- Ubuntu provides browser applications as snaps. These snaps do not use the system certificate store (https://bugs.launchpad.net/ubuntu/+source/chromium-browser/+bug/1901586). For .NET itself and CLI applications the development certificate will be trusted. For browsers, the user still needs manually accept the development certificate.
+- Ubuntu browsers are packaged as snaps. Snaps do not use system certificates. If the user uses a snap-based Firefox, the CA certificate is added to its certificate store. Other browsers are (currently) not configured.
 
 # How it works
 

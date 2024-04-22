@@ -1,3 +1,4 @@
+using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -17,6 +18,9 @@ partial class CertificateManager
 
     public void InstallAndTrust()
     {
+        string username = Environment.UserName;
+        string certificateName = $"aspnet-dev-{username}";
+
         Console.WriteLine("Removing existing development certificates.");
         Execute("dotnet", "dev-certs", "https", "--clean");
 
@@ -24,33 +28,58 @@ partial class CertificateManager
         _caCertificate = CreateAspNetDevelopmentCACertificate(DateTime.UtcNow, DateTime.UtcNow.AddYears(10));
 
         Console.WriteLine("Installing CA certificate.");
-        InstallCaCertificate(_caCertificate);
+        InstallCaCertificate(certificateName, _caCertificate);
 
         Console.WriteLine("Creating development certificate.");
         var devCert = CreateAspNetCoreHttpsDevelopmentCertificate(DateTime.UtcNow, DateTime.UtcNow.AddYears(1));
         Console.WriteLine("Installing development certificate.");
-        SaveCertificateCore(devCert, StoreName.My, StoreLocation.CurrentUser);
+        devCert = SaveCertificateCore(devCert, StoreName.My, StoreLocation.CurrentUser);
+
+        var additionalStores = FindAdditionaCertificateStores();
+        foreach (ICertificateStore store in additionalStores)
+        {
+            Console.WriteLine($"Installing CA certificate to {store.Name}.");
+            if (!store.TryInstallCertificate(certificateName, devCert))
+            {
+                Console.Error.WriteLine("Failed to install certificate.");
+            }
+        }
     }
 
-    private static void InstallCaCertificate(X509Certificate2 caCertificate)
+    private List<ICertificateStore> FindAdditionaCertificateStores()
+    {
+        List<ICertificateStore> stores = new();
+
+        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile, Environment.SpecialFolderOption.DoNotVerify);
+
+        // Snap applications don't use '/etc/ssl' certificates. Add the certificate explicitly.
+        // https://bugs.launchpad.net/ubuntu/+source/chromium-browser/+bug/1901586
+        string firefoxSnapUserDirectory = Path.Combine(home, "snap/firefox/common/.mozilla/firefox");
+        if (Directory.Exists(firefoxSnapUserDirectory))
+        {
+            FindFirefoxCertificateStores(firefoxSnapUserDirectory, stores);
+        }
+
+        return stores;
+    }
+
+    private static void InstallCaCertificate(string name, X509Certificate2 caCertificate)
     {
         // Only the public key is stored.
         // The private key will only exist in the memory of this program
         // and no other certificates can be signed with it after the program terminates.
         char[] caCertPem = PemEncoding.Write("CERTIFICATE", caCertificate.Export(X509ContentType.Cert));
-        string username = Environment.UserName;
-        string fileNameWithoutExtension = $"aspnet-{username}";
         string certFilePath;
         string[] trustCommand;
         if (Directory.Exists(FedoraFamilyCaSourceDirectory))
         {
-            certFilePath = $"{FedoraFamilyCaSourceDirectory}/{fileNameWithoutExtension}.pem";
-            trustCommand = [ "update-ca-trust", "extract" ];
+            certFilePath = $"{FedoraFamilyCaSourceDirectory}/{name}.pem";
+            trustCommand = ["update-ca-trust", "extract"];
         }
         else if (Directory.Exists(DebianFamilyCaSourceDirectory))
         {
-            certFilePath = $"{DebianFamilyCaSourceDirectory}/{fileNameWithoutExtension}.crt";
-            trustCommand = [ "update-ca-certificates" ];
+            certFilePath = $"{DebianFamilyCaSourceDirectory}/{name}.crt";
+            trustCommand = ["update-ca-certificates"];
         }
         else
         {
