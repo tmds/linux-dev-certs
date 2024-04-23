@@ -59,7 +59,8 @@ internal class NssCertificateDatabase : ICertificateStore
         }
         else
         {
-            throw new NotSupportedException();
+            OSFlavor.ThrowNotSupported();
+            return "";
         }
     }
 }

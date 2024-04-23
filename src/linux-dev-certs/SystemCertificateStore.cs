@@ -44,6 +44,7 @@ sealed class SystemCertificateStore : ICertificateStore
 
     public void AddDependencies(HashSet<Dependency> dependencies)
     {
+        dependencies.Add(new Dependency("sudo", "sudo"));
         if (OSFlavor.IsFedoraLike)
         {
             dependencies.Add(new Dependency("update-ca-trust", "ca-certificates"));

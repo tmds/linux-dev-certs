@@ -13,8 +13,10 @@ dotnet tool update -g linux-dev-certs --prerelease --add-source https://www.myge
 
 Run it:
 ```
-dotnet linux-dev-certs install
+dotnet linux-dev-certs install --install-deps
 ```
+
+By adding the `--install-deps` argument, required system tools will be installed. When it is not specified, the tool prints a list of packages to install.
 
 # Supported distros
 
