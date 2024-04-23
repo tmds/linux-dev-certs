@@ -12,7 +12,7 @@ partial class CertificateManager
 
     private X509Certificate2? _caCertificate;
 
-    public bool InstallAndTrust()
+    public bool InstallAndTrust(bool installDeps)
     {
         if (Environment.IsPrivilegedProcess)
         {
@@ -30,15 +30,21 @@ partial class CertificateManager
         }
         var additionalStores = FindAdditionaCertificateStores();
 
-        if (!CheckDependencies(systemCertStore, additionalStores))
-        {
-            return false;
-        }
-
         ConsoleColor color = Console.ForegroundColor;
         Console.ForegroundColor = ConsoleColor.Yellow;
         Console.WriteLine("Some operations require root. You may be prompted for your 'sudo' password.");
         Console.ForegroundColor = color;
+
+        HashSet<Dependency> dependencies = new();
+        systemCertStore.AddDependencies(dependencies);
+        foreach (ICertificateStore store in additionalStores)
+        {
+            store.AddDependencies(dependencies);
+        }
+        if (!CheckDependencies(dependencies, installMissing: installDeps))
+        {
+            return false;
+        }
 
         Console.WriteLine("Creating CA certificate.");
         _caCertificate = CreateAspNetDevelopmentCACertificate(DateTime.UtcNow, DateTime.UtcNow.AddYears(10));
@@ -70,32 +76,32 @@ partial class CertificateManager
         return isSuccess;
     }
 
-    private bool CheckDependencies(SystemCertificateStore systemCertStore, List<ICertificateStore> additionalStores)
-    {
-        // Find all dependencies.
-        HashSet<Dependency> dependencies = new();
-        systemCertStore.AddDependencies(dependencies);
-        foreach (ICertificateStore store in additionalStores)
-        {
-            store.AddDependencies(dependencies);
-        }
+    private string[]? _searchPaths;
+    private string[] SearchPaths => _searchPaths ??= (Environment.GetEnvironmentVariable("PATH") ?? "").Split(':');
 
+    private bool IsProgramFound(string program)
+    {
+        bool found = false;
+        foreach (var path in SearchPaths)
+        {
+            string filename = Path.Combine(path, program);
+            if (File.Exists(filename))
+            {
+                found = true;
+            }
+        }
+        return found;
+    }
+
+    private bool CheckDependencies(HashSet<Dependency> dependencies, bool installMissing = true)
+    {
         // Remove dependencies that are met.
         HashSet<Dependency> unmetDependencies = new();
         string pathEnvVar = Environment.GetEnvironmentVariable("PATH") ?? "";
         string[] paths = pathEnvVar.Split(':');
         foreach (var dependency in dependencies)
         {
-            bool found = false;
-            foreach (var path in paths)
-            {
-                string filename = Path.Combine(path, dependency.ProgramName);
-                if (File.Exists(filename))
-                {
-                    found = true;
-                }
-            }
-            if (!found)
+            if (!IsProgramFound(dependency.ProgramName))
             {
                 unmetDependencies.Add(dependency);
             }
@@ -109,29 +115,58 @@ partial class CertificateManager
         // Find the package names.
         HashSet<string> packagesToInstall = unmetDependencies.Select(dep => dep.PackageName).ToHashSet();
 
-        ConsoleColor color = Console.ForegroundColor;
-
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.Error.WriteLine($"There are missing dependencies.");
-
-        Console.ForegroundColor = color;
-        Console.Error.WriteLine("You can install them by using the following command:");
-
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        if (OSFlavor.IsFedoraLike)
+        bool hasSudo = IsProgramFound("sudo");
+        if (installMissing && hasSudo)
         {
-            Console.Error.WriteLine($"    dnf install {string.Join(", ", packagesToInstall)}");
-        }
-        else if (OSFlavor.IsDebianLike)
-        {
-            Console.Error.WriteLine($"    apt-get install {string.Join(", ", packagesToInstall)}");
+            Console.WriteLine($"The following packages are missing: {string.Join(", ", packagesToInstall)}.");
+            Console.WriteLine($"Installing missing packages.");
+            string[] command;
+            if (OSFlavor.IsFedoraLike)
+            {
+                command = ["dnf", "install", "-y", ..packagesToInstall];
+            }
+            else if (OSFlavor.IsDebianLike)
+            {
+                command = ["apt-get", "install", "-y", ..packagesToInstall];
+            }
+            else
+            {
+                command = [];
+                OSFlavor.ThrowNotSupported();
+            }
+            ProcessHelper.SudoExecute(command);
         }
         else
         {
+            ConsoleColor color = Console.ForegroundColor;
+
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Error.WriteLine($"There are missing dependencies.");
+            if (hasSudo)
+            {
+                Console.Error.WriteLine("You can install them by adding the '--instal-deps' option or by executing the following command:");
+            }
+            else
+            {
+                Console.Error.WriteLine("You can install them by executing the following command:");
+            }
+
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            if (OSFlavor.IsFedoraLike)
+            {
+                Console.Error.WriteLine($"    dnf install {string.Join(", ", packagesToInstall)}");
+            }
+            else if (OSFlavor.IsDebianLike)
+            {
+                Console.Error.WriteLine($"    apt-get install {string.Join(", ", packagesToInstall)}");
+            }
+            else
+            {
+                Console.ForegroundColor = color;
+                OSFlavor.ThrowNotSupported();
+            }
             Console.ForegroundColor = color;
-            OSFlavor.ThrowNotSupported();
         }
-        Console.ForegroundColor = color;
 
         return false;
     }
