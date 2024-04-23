@@ -7,18 +7,18 @@ if (!OperatingSystem.IsLinux())
     return 1;
 }
 
-var installDepsOption = new Option<bool>
+var noDepsOption = new Option<bool>
 (
-    name: "--install-deps",
-    description: "Install required system tools."
+    name: "--no-deps",
+    description: "Don't install required system tools. Print list of packages to install instead."
 );
 var installCommand = new Command("install", "Installs (or updates) the ASP.NET Core development certificate.")
 {
-    installDepsOption
+    noDepsOption
 };
 installCommand.SetHandler((InvocationContext ctx) =>
 {
-    bool installDeps = ctx.ParseResult.GetValueForOption(installDepsOption);
+    bool installDeps = !ctx.ParseResult.GetValueForOption(noDepsOption);
 
     var certManager = new LinuxDevCerts.CertificateManager();
     bool isSuccess = certManager.InstallAndTrust(installDeps);

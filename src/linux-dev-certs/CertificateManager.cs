@@ -135,6 +135,8 @@ partial class CertificateManager
                 OSFlavor.ThrowNotSupported();
             }
             ProcessHelper.SudoExecute(command);
+
+            return true;
         }
         else
         {
@@ -142,14 +144,7 @@ partial class CertificateManager
 
             Console.ForegroundColor = ConsoleColor.Red;
             Console.Error.WriteLine($"There are missing dependencies.");
-            if (hasSudo)
-            {
-                Console.Error.WriteLine("You can install them by adding the '--instal-deps' option or by executing the following command:");
-            }
-            else
-            {
-                Console.Error.WriteLine("You can install them by executing the following command:");
-            }
+            Console.Error.WriteLine("You can install them by executing the following command:");
 
             Console.ForegroundColor = ConsoleColor.Yellow;
             if (OSFlavor.IsFedoraLike)
@@ -166,9 +161,9 @@ partial class CertificateManager
                 OSFlavor.ThrowNotSupported();
             }
             Console.ForegroundColor = color;
-        }
 
-        return false;
+            return false;
+        }
     }
 
     private List<ICertificateStore> FindAdditionaCertificateStores()

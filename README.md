@@ -4,7 +4,7 @@ This repo contains a .NET global tool that creates and installs a developer cert
 
 # Using
 
-**note** the tool updates the system CA store and calls `sudo` to obtain permissions to update it. See _How it works_ below.
+**note** the tool uses `sudo` to updates the system CA store and to install required system tools.
 
 Install the tool:
 ```
@@ -13,10 +13,10 @@ dotnet tool update -g linux-dev-certs --prerelease --add-source https://www.myge
 
 Run it:
 ```
-dotnet linux-dev-certs install --install-deps
+dotnet linux-dev-certs install
 ```
 
-By adding the `--install-deps` argument, required system tools will be installed. When it is not specified, the tool prints a list of packages to install.
+You can add the `--no-deps` argument to stop the tool from installing system tools and print out the list of packages to install instead.
 
 # Supported distros
 
