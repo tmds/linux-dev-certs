@@ -7,7 +7,7 @@ static class OSFlavor
     public static bool IsDebianLike => MatchesId("debian");
 
     private static string? _id;
-    private static string? _idLike;
+    private static string[]? _idLike;
 
     public static void ThrowNotSupported()
     {
@@ -18,7 +18,7 @@ static class OSFlavor
     private static bool MatchesId(string id)
     {
         EnsureIds();
-        return _id == id || _idLike == id;
+        return _id == id || (Array.IndexOf(_idLike!, id) != -1);
     }
 
     public static void EnsureIds()
@@ -36,16 +36,16 @@ static class OSFlavor
                     ReadOnlySpan<char> value = default;
                     if(TryGetFieldValue(lineSpan, "ID=", ref value))
                     {
-                        _id = value.ToString();
+                        _id = value.ToString().Trim();
                     }
                     else if(TryGetFieldValue(lineSpan, "ID_LIKE=", ref value))
                     {
-                        _idLike = value.ToString();
+                        _idLike = value.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                     }
                 }
             }
             _id ??= "";
-            _idLike ??= "";
+            _idLike ??= Array.Empty<string>();
         }
 
         static bool TryGetFieldValue(ReadOnlySpan<char> line, ReadOnlySpan<char> prefix, ref ReadOnlySpan<char> value)
