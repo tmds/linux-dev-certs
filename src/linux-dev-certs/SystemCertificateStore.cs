@@ -32,7 +32,7 @@ sealed class SystemCertificateStore : ICertificateStore
         }
         else if (OSFlavor.IsArchLike)
         {
-            certFilePath = $"{ArchFamilyCaSourceDirectory}/{name}.crt";
+            certFilePath = $"{ArchFamilyCaSourceDirectory}/{name}.pem";
             trustCommand = ["update-ca-trust", "extract"];
         }
         else
