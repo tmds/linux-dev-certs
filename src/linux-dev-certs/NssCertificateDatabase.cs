@@ -57,6 +57,10 @@ internal class NssCertificateDatabase : ICertificateStore
         {
             return "libnss3-tools";
         }
+        else if(OSFlavor.IsArchLike)
+        {
+            return "nss";
+        }
         else
         {
             OSFlavor.ThrowNotSupported();

@@ -129,6 +129,10 @@ partial class CertificateManager
             {
                 command = ["apt-get", "install", "-y", ..packagesToInstall];
             }
+            else if(OSFlavor.IsArchLike)
+            {
+                command = ["pacman", "-S", "-y", ..packagesToInstall];
+            }
             else
             {
                 command = [];
@@ -154,6 +158,10 @@ partial class CertificateManager
             else if (OSFlavor.IsDebianLike)
             {
                 Console.Error.WriteLine($"    apt-get install {string.Join(", ", packagesToInstall)}");
+            }
+            else if(OSFlavor.IsArchLike)
+            {
+                Console.Error.WriteLine($"    pacman -S {string.Join(", ", packagesToInstall)}");
             }
             else
             {
