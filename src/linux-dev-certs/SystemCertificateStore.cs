@@ -8,8 +8,7 @@ sealed class SystemCertificateStore : ICertificateStore
 {
     private const string FedoraFamilyCaSourceDirectory = "/etc/pki/ca-trust/source/anchors";
     private const string DebianFamilyCaSourceDirectory = "/usr/local/share/ca-certificates";
-    private const string ArchFamilyCaSourceDirectory = "/usr/share/ca-certificates/trust-source/anchors"; // low priority
-
+    private const string ArchFamilyCaSourceDirectory = "/etc/ca-certificates/trust-source/anchors/";
     public string Name => "System Certificates";
 
     public bool TryInstallCertificate(string name, X509Certificate2 certificate)
@@ -32,8 +31,8 @@ sealed class SystemCertificateStore : ICertificateStore
         }
         else if (OSFlavor.IsArchLike)
         {
-            certFilePath = $"{ArchFamilyCaSourceDirectory}/{name}.pem";
-            trustCommand = ["update-ca-trust", "extract"];
+            certFilePath = $"{ArchFamilyCaSourceDirectory}/{name}.crt";
+            trustCommand = ["trust", "extract-compat"];
         }
         else
         {
@@ -61,7 +60,7 @@ sealed class SystemCertificateStore : ICertificateStore
         }
         else if(OSFlavor.IsArchLike)
         {
-            dependencies.Add(new Dependency("update-ca-trust", "ca-certificates"));
+            dependencies.Add(new Dependency("trust", "p11-kit"));
         }
         else
         {
