@@ -8,7 +8,7 @@ sealed class SystemCertificateStore : ICertificateStore
 {
     private const string FedoraFamilyCaSourceDirectory = "/etc/pki/ca-trust/source/anchors";
     private const string DebianFamilyCaSourceDirectory = "/usr/local/share/ca-certificates";
-
+    private const string ArchFamilyCaSourceDirectory = "/etc/ca-certificates/trust-source/anchors/";
     public string Name => "System Certificates";
 
     public bool TryInstallCertificate(string name, X509Certificate2 certificate)
@@ -28,6 +28,11 @@ sealed class SystemCertificateStore : ICertificateStore
         {
             certFilePath = $"{DebianFamilyCaSourceDirectory}/{name}.crt";
             trustCommand = ["update-ca-certificates"];
+        }
+        else if (OSFlavor.IsArchLike)
+        {
+            certFilePath = $"{ArchFamilyCaSourceDirectory}/{name}.crt";
+            trustCommand = ["trust", "extract-compat"];
         }
         else
         {
@@ -53,6 +58,10 @@ sealed class SystemCertificateStore : ICertificateStore
         {
             dependencies.Add(new Dependency("update-ca-certificates", "ca-certificates"));
         }
+        else if(OSFlavor.IsArchLike)
+        {
+            dependencies.Add(new Dependency("trust", "p11-kit"));
+        }
         else
         {
             OSFlavor.ThrowNotSupported();
@@ -60,5 +69,5 @@ sealed class SystemCertificateStore : ICertificateStore
     }
 
     public bool IsSupported
-        => OSFlavor.IsFedoraLike || OSFlavor.IsDebianLike;
+        => OSFlavor.IsFedoraLike || OSFlavor.IsDebianLike || OSFlavor.IsArchLike;
 }
