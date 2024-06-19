@@ -43,6 +43,42 @@ partial class CertificateManager
             }
         }
     }
+    
+    private static void FindLibrewolfCertificateStores(string librewolfUserDirectory, List<ICertificateStore> stores)
+    {
+        string profilesIniFileName = Path.Combine(librewolfUserDirectory, "profiles.ini");
+        if (File.Exists(profilesIniFileName))
+        {
+            using FileStream profilesIniFile = File.OpenRead(profilesIniFileName);
+            List<IniSection> sections = ReadIniFile(profilesIniFile);
+            List<string> profileFolders = new();
+            foreach (var section in sections)
+            {
+                string? path;
+                if (section.Name.StartsWith("Install", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    if (!section.Properties.TryGetValue("Default", out path))
+                    {
+                        continue;
+                    }
+                }
+                else if (!section.Properties.TryGetValue("Path", out path))
+                {
+                    continue;
+                }
+
+                string profileFolder = Path.Combine(librewolfUserDirectory, path);
+                if (!profileFolders.Contains(profileFolder))
+                {
+                    profileFolders.Add(profileFolder);
+                    if (Directory.Exists(profileFolder))
+                    {
+                        stores.Add(new NssCertificateDatabase($"Librewolf profile '{profileFolder}'", profileFolder));
+                    }
+                }
+            }
+        }
+    }
 
     private class IniSection
     {

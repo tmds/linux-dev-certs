@@ -16,19 +16,23 @@ partial class CertificateManager
     {
         if (Environment.IsPrivilegedProcess)
         {
-            Console.Error.WriteLine("The tool is running with elevated privileges. You should run under the user account of the developer.");
+            Console.Error.WriteLine(
+                "The tool is running with elevated privileges. You should run under the user account of the developer.");
             return false;
         }
+
         string username = Environment.UserName;
         string certificateId = $"aspnet-dev-{username}";
 
         SystemCertificateStore systemCertStore = new();
         if (!systemCertStore.IsSupported)
         {
-            Console.Error.WriteLine($"Can not determine location to install CA certificate on {RuntimeInformation.OSDescription}.");
+            Console.Error.WriteLine(
+                $"Can not determine location to install CA certificate on {RuntimeInformation.OSDescription}.");
             return false;
         }
-        var additionalStores = FindAdditionaCertificateStores();
+
+        var additionalStores = FindAdditionalCertificateStores();
 
         ConsoleColor color = Console.ForegroundColor;
         Console.ForegroundColor = ConsoleColor.Yellow;
@@ -41,6 +45,7 @@ partial class CertificateManager
         {
             store.AddDependencies(dependencies);
         }
+
         if (!CheckDependencies(dependencies, installMissing: installDeps))
         {
             return false;
@@ -73,6 +78,7 @@ partial class CertificateManager
                 Console.Error.WriteLine("Failed to install certificate.");
             }
         }
+
         return isSuccess;
     }
 
@@ -90,6 +96,7 @@ partial class CertificateManager
                 found = true;
             }
         }
+
         return found;
     }
 
@@ -129,7 +136,11 @@ partial class CertificateManager
             {
                 command = ["apt-get", "install", "-y", ..packagesToInstall];
             }
-            else if(OSFlavor.IsArchLike)
+            else if (OSFlavor.IsGentooLike)
+            {
+                command = ["emerge", ..packagesToInstall];
+            }
+            else if (OSFlavor.IsArchLike)
             {
                 command = ["pacman", "-S", "-y", ..packagesToInstall];
             }
@@ -138,6 +149,7 @@ partial class CertificateManager
                 command = [];
                 OSFlavor.ThrowNotSupported();
             }
+
             ProcessHelper.SudoExecute(command);
 
             return true;
@@ -159,7 +171,11 @@ partial class CertificateManager
             {
                 Console.Error.WriteLine($"    apt-get install {string.Join(", ", packagesToInstall)}");
             }
-            else if(OSFlavor.IsArchLike)
+            else if (OSFlavor.IsGentooLike)
+            {
+                Console.Error.WriteLine($"    emerge {string.Join(", ", packagesToInstall)}");
+            }
+            else if (OSFlavor.IsArchLike)
             {
                 Console.Error.WriteLine($"    pacman -S {string.Join(", ", packagesToInstall)}");
             }
@@ -168,17 +184,19 @@ partial class CertificateManager
                 Console.ForegroundColor = color;
                 OSFlavor.ThrowNotSupported();
             }
+
             Console.ForegroundColor = color;
 
             return false;
         }
     }
 
-    private List<ICertificateStore> FindAdditionaCertificateStores()
+    private List<ICertificateStore> FindAdditionalCertificateStores()
     {
         List<ICertificateStore> stores = new();
 
-        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile, Environment.SpecialFolderOption.DoNotVerify);
+        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile,
+            Environment.SpecialFolderOption.DoNotVerify);
 
         // Snap applications don't use '/etc/ssl' certificates. Add the certificate explicitly.
         // https://bugs.launchpad.net/ubuntu/+source/chromium-browser/+bug/1901586
@@ -188,14 +206,28 @@ partial class CertificateManager
             FindFirefoxCertificateStores(firefoxSnapUserDirectory, stores);
         }
 
+        string firefoxUserDirectory = Path.Combine(home, ".mozilla/firefox");
+        if (OSFlavor.IsGentooLike && Directory.Exists(firefoxUserDirectory))
+        {
+            FindFirefoxCertificateStores(firefoxUserDirectory, stores);
+        }
+
+        string librewolfUserDirectory = Path.Combine(home, ".librewolf");
+        if (OSFlavor.IsGentooLike && Directory.Exists(librewolfUserDirectory))
+        {
+            FindLibrewolfCertificateStores(librewolfUserDirectory, stores);
+        }
+
         return stores;
     }
 
     // Creates a cert issued by _caCertificate.
-    private X509Certificate2 CreateAspNetDevelopmentCertificate(X500DistinguishedName subject, List<X509Extension> extensions, DateTimeOffset notBefore, DateTimeOffset notAfter)
+    private X509Certificate2 CreateAspNetDevelopmentCertificate(X500DistinguishedName subject,
+        List<X509Extension> extensions, DateTimeOffset notBefore, DateTimeOffset notAfter)
         => CreateCertificate(subject, extensions, notBefore, notAfter, RSAMinimumKeySizeInBits, _caCertificate);
 
-    private static X509Certificate2 CreateAspNetDevelopmentCACertificate(DateTimeOffset notBefore, DateTimeOffset notAfter)
+    private static X509Certificate2 CreateAspNetDevelopmentCACertificate(DateTimeOffset notBefore,
+        DateTimeOffset notAfter)
     {
         string certOwner = $"{Environment.UserName}@{Environment.MachineName}";
         string distinguishedName = $"{LocalhostCASubject},OU={certOwner}";
@@ -210,12 +242,13 @@ partial class CertificateManager
             critical: true);
 
         var extensions = new List<X509Extension>
-            {
-                basicConstraints,
-                keyUsage
-            };
+        {
+            basicConstraints,
+            keyUsage
+        };
 
-        return CreateCertificate(subject, extensions, notBefore, notAfter, RsaCACertMinimumKeySizeInBits, issuerCert: null /* self-signed */);
+        return CreateCertificate(subject, extensions, notBefore, notAfter, RsaCACertMinimumKeySizeInBits,
+            issuerCert: null /* self-signed */);
     }
 
     static internal X509Certificate2 CreateCertificate(
@@ -234,8 +267,9 @@ partial class CertificateManager
             request.CertificateExtensions.Add(extension);
         }
 
-        var result = issuerCert == null ? request.CreateSelfSigned(notBefore, notAfter)
-                                        : request.Create(issuerCert, notBefore, notAfter, Guid.NewGuid().ToByteArray());
+        var result = issuerCert == null
+            ? request.CreateSelfSigned(notBefore, notAfter)
+            : request.Create(issuerCert, notBefore, notAfter, Guid.NewGuid().ToByteArray());
 
         return result.HasPrivateKey ? result : result.CopyWithPrivateKey(key);
 

@@ -24,7 +24,7 @@ sealed class SystemCertificateStore : ICertificateStore
             certFilePath = $"{FedoraFamilyCaSourceDirectory}/{name}.pem";
             trustCommand = ["update-ca-trust", "extract"];
         }
-        else if (OSFlavor.IsDebianLike)
+        else if (OSFlavor.IsDebianLike || OSFlavor.IsGentooLike)
         {
             certFilePath = $"{DebianFamilyCaSourceDirectory}/{name}.crt";
             trustCommand = ["update-ca-certificates"];
@@ -54,11 +54,11 @@ sealed class SystemCertificateStore : ICertificateStore
         {
             dependencies.Add(new Dependency("update-ca-trust", "ca-certificates"));
         }
-        else if (OSFlavor.IsDebianLike)
+        else if (OSFlavor.IsDebianLike || OSFlavor.IsGentooLike)
         {
             dependencies.Add(new Dependency("update-ca-certificates", "ca-certificates"));
         }
-        else if(OSFlavor.IsArchLike)
+        else if (OSFlavor.IsArchLike)
         {
             dependencies.Add(new Dependency("trust", "p11-kit"));
         }
