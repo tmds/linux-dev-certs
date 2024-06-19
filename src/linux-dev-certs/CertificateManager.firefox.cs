@@ -8,9 +8,12 @@ namespace LinuxDevCerts;
 
 partial class CertificateManager
 {
-    private static void FindFirefoxCertificateStores(string firefoxUserDirectory, List<ICertificateStore> stores)
+    private static void FindFirefoxFamilyCertificateStores(
+        string browserUserDirectory, 
+        List<ICertificateStore> stores, 
+        string browserName = "Firefox")
     {
-        string profilesIniFileName = Path.Combine(firefoxUserDirectory, "profiles.ini");
+        string profilesIniFileName = Path.Combine(browserUserDirectory, "profiles.ini");
         if (File.Exists(profilesIniFileName))
         {
             using FileStream profilesIniFile = File.OpenRead(profilesIniFileName);
@@ -31,49 +34,13 @@ partial class CertificateManager
                     continue;
                 }
 
-                string profileFolder = Path.Combine(firefoxUserDirectory, path);
+                string profileFolder = Path.Combine(browserUserDirectory, path);
                 if (!profileFolders.Contains(profileFolder))
                 {
                     profileFolders.Add(profileFolder);
                     if (Directory.Exists(profileFolder))
                     {
-                        stores.Add(new NssCertificateDatabase($"Firefox profile '{profileFolder}'", profileFolder));
-                    }
-                }
-            }
-        }
-    }
-    
-    private static void FindLibrewolfCertificateStores(string librewolfUserDirectory, List<ICertificateStore> stores)
-    {
-        string profilesIniFileName = Path.Combine(librewolfUserDirectory, "profiles.ini");
-        if (File.Exists(profilesIniFileName))
-        {
-            using FileStream profilesIniFile = File.OpenRead(profilesIniFileName);
-            List<IniSection> sections = ReadIniFile(profilesIniFile);
-            List<string> profileFolders = new();
-            foreach (var section in sections)
-            {
-                string? path;
-                if (section.Name.StartsWith("Install", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    if (!section.Properties.TryGetValue("Default", out path))
-                    {
-                        continue;
-                    }
-                }
-                else if (!section.Properties.TryGetValue("Path", out path))
-                {
-                    continue;
-                }
-
-                string profileFolder = Path.Combine(librewolfUserDirectory, path);
-                if (!profileFolders.Contains(profileFolder))
-                {
-                    profileFolders.Add(profileFolder);
-                    if (Directory.Exists(profileFolder))
-                    {
-                        stores.Add(new NssCertificateDatabase($"Librewolf profile '{profileFolder}'", profileFolder));
+                        stores.Add(new NssCertificateDatabase($"{browserName} profile '{profileFolder}'", profileFolder));
                     }
                 }
             }

@@ -203,19 +203,19 @@ partial class CertificateManager
         string firefoxSnapUserDirectory = Path.Combine(home, "snap/firefox/common/.mozilla/firefox");
         if (Directory.Exists(firefoxSnapUserDirectory))
         {
-            FindFirefoxCertificateStores(firefoxSnapUserDirectory, stores);
+            FindFirefoxFamilyCertificateStores(firefoxSnapUserDirectory, stores);
         }
 
         string firefoxUserDirectory = Path.Combine(home, ".mozilla/firefox");
         if (OSFlavor.IsGentooLike && Directory.Exists(firefoxUserDirectory))
         {
-            FindFirefoxCertificateStores(firefoxUserDirectory, stores);
+            FindFirefoxFamilyCertificateStores(firefoxUserDirectory, stores, "LibreWolf");
         }
 
         string librewolfUserDirectory = Path.Combine(home, ".librewolf");
         if (OSFlavor.IsGentooLike && Directory.Exists(librewolfUserDirectory))
         {
-            FindLibrewolfCertificateStores(librewolfUserDirectory, stores);
+            FindFirefoxFamilyCertificateStores(librewolfUserDirectory, stores, "LibreWolf");
         }
 
         return stores;
