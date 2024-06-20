@@ -10,7 +10,6 @@ packages/
 artifacts/
 PublishProfiles/
 .vs/
-.idea/
 .vscode/
 bower_components/
 node_modules/

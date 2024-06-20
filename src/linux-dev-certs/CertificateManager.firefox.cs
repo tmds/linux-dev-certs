@@ -8,12 +8,9 @@ namespace LinuxDevCerts;
 
 partial class CertificateManager
 {
-    private static void FindFirefoxFamilyCertificateStores(
-        string browserUserDirectory, 
-        List<ICertificateStore> stores, 
-        string browserName = "Firefox")
+    private static void FindFirefoxCertificateStores(string firefoxUserDirectory, List<ICertificateStore> stores, string browserName = "Firefox")
     {
-        string profilesIniFileName = Path.Combine(browserUserDirectory, "profiles.ini");
+        string profilesIniFileName = Path.Combine(firefoxUserDirectory, "profiles.ini");
         if (File.Exists(profilesIniFileName))
         {
             using FileStream profilesIniFile = File.OpenRead(profilesIniFileName);
@@ -34,7 +31,7 @@ partial class CertificateManager
                     continue;
                 }
 
-                string profileFolder = Path.Combine(browserUserDirectory, path);
+                string profileFolder = Path.Combine(firefoxUserDirectory, path);
                 if (!profileFolders.Contains(profileFolder))
                 {
                     profileFolders.Add(profileFolder);

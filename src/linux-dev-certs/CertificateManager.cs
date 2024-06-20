@@ -16,22 +16,18 @@ partial class CertificateManager
     {
         if (Environment.IsPrivilegedProcess)
         {
-            Console.Error.WriteLine(
-                "The tool is running with elevated privileges. You should run under the user account of the developer.");
+            Console.Error.WriteLine("The tool is running with elevated privileges. You should run under the user account of the developer.");
             return false;
         }
-
         string username = Environment.UserName;
         string certificateId = $"aspnet-dev-{username}";
 
         SystemCertificateStore systemCertStore = new();
         if (!systemCertStore.IsSupported)
         {
-            Console.Error.WriteLine(
-                $"Can not determine location to install CA certificate on {RuntimeInformation.OSDescription}.");
+            Console.Error.WriteLine($"Can not determine location to install CA certificate on {RuntimeInformation.OSDescription}.");
             return false;
         }
-
         var additionalStores = FindAdditionalCertificateStores();
 
         ConsoleColor color = Console.ForegroundColor;
@@ -45,7 +41,6 @@ partial class CertificateManager
         {
             store.AddDependencies(dependencies);
         }
-
         if (!CheckDependencies(dependencies, installMissing: installDeps))
         {
             return false;
@@ -78,7 +73,6 @@ partial class CertificateManager
                 Console.Error.WriteLine("Failed to install certificate.");
             }
         }
-
         return isSuccess;
     }
 
@@ -96,7 +90,6 @@ partial class CertificateManager
                 found = true;
             }
         }
-
         return found;
     }
 
@@ -149,7 +142,6 @@ partial class CertificateManager
                 command = [];
                 OSFlavor.ThrowNotSupported();
             }
-
             ProcessHelper.SudoExecute(command);
 
             return true;
@@ -184,7 +176,6 @@ partial class CertificateManager
                 Console.ForegroundColor = color;
                 OSFlavor.ThrowNotSupported();
             }
-
             Console.ForegroundColor = color;
 
             return false;
@@ -203,31 +194,29 @@ partial class CertificateManager
         string firefoxSnapUserDirectory = Path.Combine(home, "snap/firefox/common/.mozilla/firefox");
         if (Directory.Exists(firefoxSnapUserDirectory))
         {
-            FindFirefoxFamilyCertificateStores(firefoxSnapUserDirectory, stores);
+            FindFirefoxCertificateStores(firefoxSnapUserDirectory, stores);
         }
 
         string firefoxUserDirectory = Path.Combine(home, ".mozilla/firefox");
         if (OSFlavor.IsGentooLike && Directory.Exists(firefoxUserDirectory))
         {
-            FindFirefoxFamilyCertificateStores(firefoxUserDirectory, stores, "LibreWolf");
+            FindFirefoxCertificateStores(firefoxUserDirectory, stores, "LibreWolf");
         }
 
         string librewolfUserDirectory = Path.Combine(home, ".librewolf");
         if (OSFlavor.IsGentooLike && Directory.Exists(librewolfUserDirectory))
         {
-            FindFirefoxFamilyCertificateStores(librewolfUserDirectory, stores, "LibreWolf");
+            FindFirefoxCertificateStores(librewolfUserDirectory, stores, "LibreWolf");
         }
 
         return stores;
     }
 
     // Creates a cert issued by _caCertificate.
-    private X509Certificate2 CreateAspNetDevelopmentCertificate(X500DistinguishedName subject,
-        List<X509Extension> extensions, DateTimeOffset notBefore, DateTimeOffset notAfter)
+    private X509Certificate2 CreateAspNetDevelopmentCertificate(X500DistinguishedName subject, List<X509Extension> extensions, DateTimeOffset notBefore, DateTimeOffset notAfter)
         => CreateCertificate(subject, extensions, notBefore, notAfter, RSAMinimumKeySizeInBits, _caCertificate);
 
-    private static X509Certificate2 CreateAspNetDevelopmentCACertificate(DateTimeOffset notBefore,
-        DateTimeOffset notAfter)
+    private static X509Certificate2 CreateAspNetDevelopmentCACertificate(DateTimeOffset notBefore, DateTimeOffset notAfter)
     {
         string certOwner = $"{Environment.UserName}@{Environment.MachineName}";
         string distinguishedName = $"{LocalhostCASubject},OU={certOwner}";
@@ -242,13 +231,12 @@ partial class CertificateManager
             critical: true);
 
         var extensions = new List<X509Extension>
-        {
-            basicConstraints,
-            keyUsage
-        };
+            {
+                basicConstraints,
+                keyUsage
+            };
 
-        return CreateCertificate(subject, extensions, notBefore, notAfter, RsaCACertMinimumKeySizeInBits,
-            issuerCert: null /* self-signed */);
+        return CreateCertificate(subject, extensions, notBefore, notAfter, RsaCACertMinimumKeySizeInBits, issuerCert: null /* self-signed */);
     }
 
     static internal X509Certificate2 CreateCertificate(
@@ -267,9 +255,8 @@ partial class CertificateManager
             request.CertificateExtensions.Add(extension);
         }
 
-        var result = issuerCert == null
-            ? request.CreateSelfSigned(notBefore, notAfter)
-            : request.Create(issuerCert, notBefore, notAfter, Guid.NewGuid().ToByteArray());
+        var result = issuerCert == null ? request.CreateSelfSigned(notBefore, notAfter)
+                                        : request.Create(issuerCert, notBefore, notAfter, Guid.NewGuid().ToByteArray());
 
         return result.HasPrivateKey ? result : result.CopyWithPrivateKey(key);
 
