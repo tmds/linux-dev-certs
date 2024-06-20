@@ -28,7 +28,7 @@ partial class CertificateManager
             Console.Error.WriteLine($"Can not determine location to install CA certificate on {RuntimeInformation.OSDescription}.");
             return false;
         }
-        var additionalStores = FindAdditionaCertificateStores();
+        var additionalStores = FindAdditionalCertificateStores();
 
         ConsoleColor color = Console.ForegroundColor;
         Console.ForegroundColor = ConsoleColor.Yellow;
@@ -129,7 +129,11 @@ partial class CertificateManager
             {
                 command = ["apt-get", "install", "-y", ..packagesToInstall];
             }
-            else if(OSFlavor.IsArchLike)
+            else if (OSFlavor.IsGentooLike)
+            {
+                command = ["emerge", ..packagesToInstall];
+            }
+            else if (OSFlavor.IsArchLike)
             {
                 command = ["pacman", "-S", "-y", ..packagesToInstall];
             }
@@ -159,7 +163,11 @@ partial class CertificateManager
             {
                 Console.Error.WriteLine($"    apt-get install {string.Join(", ", packagesToInstall)}");
             }
-            else if(OSFlavor.IsArchLike)
+            else if (OSFlavor.IsGentooLike)
+            {
+                Console.Error.WriteLine($"    emerge {string.Join(", ", packagesToInstall)}");
+            }
+            else if (OSFlavor.IsArchLike)
             {
                 Console.Error.WriteLine($"    pacman -S {string.Join(", ", packagesToInstall)}");
             }
@@ -174,11 +182,12 @@ partial class CertificateManager
         }
     }
 
-    private List<ICertificateStore> FindAdditionaCertificateStores()
+    private List<ICertificateStore> FindAdditionalCertificateStores()
     {
         List<ICertificateStore> stores = new();
 
-        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile, Environment.SpecialFolderOption.DoNotVerify);
+        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile,
+            Environment.SpecialFolderOption.DoNotVerify);
 
         // Snap applications don't use '/etc/ssl' certificates. Add the certificate explicitly.
         // https://bugs.launchpad.net/ubuntu/+source/chromium-browser/+bug/1901586
@@ -186,6 +195,18 @@ partial class CertificateManager
         if (Directory.Exists(firefoxSnapUserDirectory))
         {
             FindFirefoxCertificateStores(firefoxSnapUserDirectory, stores);
+        }
+
+        string firefoxUserDirectory = Path.Combine(home, ".mozilla/firefox");
+        if (OSFlavor.IsGentooLike && Directory.Exists(firefoxUserDirectory))
+        {
+            FindFirefoxCertificateStores(firefoxUserDirectory, stores, "LibreWolf");
+        }
+
+        string librewolfUserDirectory = Path.Combine(home, ".librewolf");
+        if (OSFlavor.IsGentooLike && Directory.Exists(librewolfUserDirectory))
+        {
+            FindFirefoxCertificateStores(librewolfUserDirectory, stores, "LibreWolf");
         }
 
         return stores;

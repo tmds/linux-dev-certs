@@ -20,10 +20,12 @@ If you get an error saying the _Could not execute because the specified command 
 - Fedora and derived (RHEL, AlmaLinux, ...)
 - Debian and derived (Ubuntu, ...)
 - Arch Linux
+- Gentoo
 
 Limitations:
 
 - Ubuntu browsers are packaged as snaps. Snaps do not use system certificates. If the user uses a snap-based Firefox, the CA certificate is added to its certificate store. Other browsers are (currently) not configured.
+- On gentoo, binary versions of browsers do not support system certificates. If the user uses a binary-based Firefox/LibreWolf, the CA certificate is added to its certificate store. Other browsers are (currently) not configured.
 
 # How it works
 

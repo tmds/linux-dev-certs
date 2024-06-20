@@ -6,6 +6,7 @@ static class OSFlavor
     public static bool IsFedoraLike => MatchesId("fedora");
     public static bool IsDebianLike => MatchesId("debian");
     public static bool IsArchLike => MatchesId("arch");
+    public static bool IsGentooLike => MatchesId("gentoo");
 
     private static string? _id;
     private static string[]? _idLike;
