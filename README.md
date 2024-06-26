@@ -4,7 +4,7 @@ This repo contains a .NET global tool that creates and installs a developer cert
 
 # Using
 
-**note** the tool uses `sudo` to updates the system CA store and to install required system tools.
+**note** the tool uses `sudo` to update the system CA store and install required system tools.
 
 ```
 dotnet tool update -g linux-dev-certs
@@ -13,7 +13,7 @@ dotnet linux-dev-certs install
 
 You can add the `--no-deps` argument to stop the tool from installing system tools and print out the list of packages to install instead.
 
-If you get an error saying the _Could not execute because the specified command or file was not found._, try adding the .NET tools folder to PATH: `PATH=$PATH:~/.dotnet/tools`.
+If you get an error saying _Could not execute because the specified command or file was not found._, try adding the .NET tools folder to PATH: `PATH=$PATH:~/.dotnet/tools`.
 
 # Supported distros
 
@@ -29,4 +29,4 @@ Limitations:
 
 # How it works
 
-To work accross a range of distro applications, the tool generates a CA certificate which is added to the system store. This CA certificate is used to create an ASP.NET Core developer certificate that will be picked up by ASP.NET Core. The private key of the CA certificate is not stored and therefore it can not be used to sign additional certificates.
+To work across a range of distro applications, the tool generates a CA certificate which is added to the system store. This CA certificate is used to create an ASP.NET Core developer certificate that will be picked up by ASP.NET Core. The private key of the CA certificate is not stored and therefore it can not be used to sign additional certificates.
