@@ -66,7 +66,7 @@ partial class CertificateManager
         bool isSuccess = true;
         foreach (ICertificateStore store in additionalStores)
         {
-            Console.WriteLine($"Installing CA certificate to {store.Name}.");
+            Console.WriteLine($"Installing development certificate to {store.Name}.");
             if (!store.TryInstallCertificate(certificateId, devCert))
             {
                 isSuccess = false;
