@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -18,10 +20,9 @@ partial class CertificateManager
     private const string ServerAuthenticationEnhancedKeyUsageOid = "1.3.6.1.5.5.7.3.1";
     private const string ServerAuthenticationEnhancedKeyUsageOidFriendlyName = "Server Authentication";
     private const string LocalhostHttpsDnsName = "localhost";
-    private const string LocalhostHttpsDistinguishedName = "CN=" + LocalhostHttpsDnsName;
     public const int RSAMinimumKeySizeInBits = 2048;
     private int AspNetHttpsCertificateVersion => CurrentAspNetCoreCertificateVersion;
-    public string Subject => LocalhostHttpsDistinguishedName;
+    public string Subject => $"OU={Environment.UserName}@{Environment.MachineName},O={AspNetHttpsOidFriendlyName}";
 
     // Copied from aspnetcore CertificateManager.cs.
     // Call to 'CreateSelfSignedCertificate' at the end replaced by 'CreateAspNetDevelopmentCertificate'.
@@ -29,8 +30,28 @@ partial class CertificateManager
     {
         var subject = new X500DistinguishedName(Subject);
         var extensions = new List<X509Extension>();
+        
         var sanBuilder = new SubjectAlternativeNameBuilder();
         sanBuilder.AddDnsName(LocalhostHttpsDnsName);
+        if (Socket.OSSupportsIPv4)
+        {
+            sanBuilder.AddIpAddress(IPAddress.Loopback);
+        }
+        if (Socket.OSSupportsIPv6)
+        {
+            sanBuilder.AddIpAddress(IPAddress.IPv6Loopback);
+        }
+        var entry = Dns.GetHostEntry(Dns.GetHostName());
+        var ipv4Addresses = entry.AddressList.Where(ipAddress => ipAddress.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ipAddress)).ToArray();
+        var ipv6Addresses = entry.AddressList.Where(ipAddress => ipAddress.AddressFamily == AddressFamily.InterNetworkV6 && !IPAddress.IsLoopback(ipAddress) && !ipAddress.IsIPv6LinkLocal).ToArray();
+        foreach (var ipv4Address in ipv4Addresses)
+        {
+            sanBuilder.AddIpAddress(ipv4Address);
+        }
+        foreach (var ipv6Address in ipv6Addresses)
+        {
+            sanBuilder.AddIpAddress(ipv6Address);
+        }
 
         var keyUsage = new X509KeyUsageExtension(X509KeyUsageFlags.KeyEncipherment | X509KeyUsageFlags.DigitalSignature, critical: true);
         var enhancedKeyUsage = new X509EnhancedKeyUsageExtension(
