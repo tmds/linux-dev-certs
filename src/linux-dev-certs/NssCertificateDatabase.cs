@@ -65,6 +65,10 @@ internal class NssCertificateDatabase : ICertificateStore
         {
             return "nss";
         }
+        else if(OSFlavor.IsSlackLike)
+        {
+            return "mozilla-nss";
+        }
         else
         {
             OSFlavor.ThrowNotSupported();
