@@ -10,7 +10,6 @@
     <ToolCommandName>dotnet-linux-dev-certs</ToolCommandName>
     <AssemblyName>dotnet-linux-dev-certs</AssemblyName>
     <PackageId>linux-dev-certs</PackageId>
-    <PackageType>DotnetCliTool</PackageType>
     <Authors>Tom Deseyn</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Copyright>Tom Deseyn</Copyright>
