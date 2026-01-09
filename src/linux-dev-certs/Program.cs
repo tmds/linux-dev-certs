@@ -29,10 +29,6 @@ installCommand.SetHandler((InvocationContext ctx) =>
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine("The development certificate was successfully installed.");
 
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine("ASP.NET Core applications may still print a warning at startup that the developer certificate is not trusted.");
-        Console.WriteLine("This is a false warning. The message is no longer printed with ASP.NET Core 9 preview 6+.");
-
         Console.ForegroundColor = color;
     }
     ctx.ExitCode = isSuccess ? 0 : 1;
