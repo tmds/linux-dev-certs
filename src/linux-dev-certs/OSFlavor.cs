@@ -15,7 +15,7 @@ static class OSFlavor
     public static void ThrowNotSupported()
     {
         EnsureIds();
-        throw new NotSupportedException($"This appears to be an unsupported system configuration: {RuntimeInformation.OSDescription}.");
+        throw new NotSupportedException($"This is an unsupported system configuration: {RuntimeInformation.OSDescription}.");
     }
 
     private static bool MatchesId(string id)
