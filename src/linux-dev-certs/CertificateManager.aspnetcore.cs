@@ -12,11 +12,23 @@ namespace LinuxDevCerts;
 partial class CertificateManager
 {
     // Copied from aspnetcore CertificateManager.cs.
-    internal const int CurrentAspNetCoreCertificateVersion = 2;
+    internal const int CurrentAspNetCoreCertificateVersion = 6;
     internal const string AspNetHttpsOid = "1.3.6.1.4.1.311.84.1.1";
     internal const string AspNetHttpsOidFriendlyName = "ASP.NET Core HTTPS development certificate";
     private const string ServerAuthenticationEnhancedKeyUsageOid = "1.3.6.1.5.5.7.3.1";
     private const string ServerAuthenticationEnhancedKeyUsageOidFriendlyName = "Server Authentication";
+    internal const string SubjectKeyIdentifierOid = "2.5.29.14";
+    internal const string AuthorityKeyIdentifierOid = "2.5.29.35";
+
+    // dns names of the host from a container
+    private const string LocalhostDockerHttpsDnsName = "host.docker.internal";
+    private const string ContainersDockerHttpsDnsName = "host.containers.internal";
+
+    // wildcard DNS names
+    private const string LocalhostWildcardHttpsDnsName = "*.dev.localhost";
+    private const string InternalWildcardHttpsDnsName = "*.dev.internal";
+
+    // main cert subject
     private const string LocalhostHttpsDnsName = "localhost";
     private const string LocalhostHttpsDistinguishedName = "CN=" + LocalhostHttpsDnsName;
     public const int RSAMinimumKeySizeInBits = 2048;
@@ -31,6 +43,12 @@ partial class CertificateManager
         var extensions = new List<X509Extension>();
         var sanBuilder = new SubjectAlternativeNameBuilder();
         sanBuilder.AddDnsName(LocalhostHttpsDnsName);
+        sanBuilder.AddDnsName(LocalhostWildcardHttpsDnsName);
+        sanBuilder.AddDnsName(InternalWildcardHttpsDnsName);
+        sanBuilder.AddDnsName(LocalhostDockerHttpsDnsName);
+        sanBuilder.AddDnsName(ContainersDockerHttpsDnsName);
+        sanBuilder.AddIpAddress(System.Net.IPAddress.Loopback);
+        sanBuilder.AddIpAddress(System.Net.IPAddress.IPv6Loopback);
 
         var keyUsage = new X509KeyUsageExtension(X509KeyUsageFlags.KeyEncipherment | X509KeyUsageFlags.DigitalSignature, critical: true);
         var enhancedKeyUsage = new X509EnhancedKeyUsageExtension(

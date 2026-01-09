@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -261,6 +262,20 @@ partial class CertificateManager
         foreach (var extension in extensions)
         {
             request.CertificateExtensions.Add(extension);
+        }
+
+        // Only add the SKI and AKI extensions if neither is already present.
+        // OpenSSL needs these to correctly identify the trust chain for a private key. If multiple certificates don't have a subject key identifier and share the same subject,
+        // the wrong certificate can be chosen for the trust chain, leading to validation errors.
+        if (!request.CertificateExtensions.Any(ext => ext.Oid?.Value is SubjectKeyIdentifierOid or AuthorityKeyIdentifierOid))
+        {
+            // RFC 5280 section 4.2.1.2
+            var subjectKeyIdentifier = new X509SubjectKeyIdentifierExtension(request.PublicKey, X509SubjectKeyIdentifierHashAlgorithm.Sha256, critical: false);
+            // RFC 5280 section 4.2.1.1
+            var authorityKeyIdentifier = X509AuthorityKeyIdentifierExtension.CreateFromSubjectKeyIdentifier(subjectKeyIdentifier);
+
+            request.CertificateExtensions.Add(subjectKeyIdentifier);
+            request.CertificateExtensions.Add(authorityKeyIdentifier);
         }
 
         var result = issuerCert == null ? request.CreateSelfSigned(notBefore, notAfter)
