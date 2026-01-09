@@ -1,6 +1,6 @@
-The .NET `dotnet dev-certs` tool doesn't support trusting the ASP.NET Core HTTPS development certificate on Linux.
+The .NET `dotnet dev-certs` command that is part of the .NET SDK supports generating a development certificate on Linux [to some extent](https://learn.microsoft.com/en-us/aspnet/core/security/enforcing-ssl#linux-specific-considerations).
 
-This repo contains a .NET global tool that creates and installs a developer certificate on Linux.
+This repo contains a .NET tool that supports additional distributions. Because the tool uses a CA-signed development certificate, the local HTTPS endpoint is trusted by a broader part of the system (browsers, tools, ...).
 
 # Using
 
