@@ -7,6 +7,7 @@ static class OSFlavor
     public static bool IsDebianLike => MatchesId("debian");
     public static bool IsArchLike => MatchesId("arch");
     public static bool IsGentooLike => MatchesId("gentoo");
+    public static bool IsSlackLike => MatchesId("slackware");
 
     private static string? _id;
     private static string[]? _idLike;
@@ -14,7 +15,7 @@ static class OSFlavor
     public static void ThrowNotSupported()
     {
         EnsureIds();
-        throw new NotSupportedException($"Can not determine location to install CA certificate on {RuntimeInformation.OSDescription}.");
+        throw new NotSupportedException($"This is an unsupported system configuration: {RuntimeInformation.OSDescription}.");
     }
 
     private static bool MatchesId(string id)

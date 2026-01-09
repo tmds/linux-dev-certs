@@ -21,6 +21,7 @@ If you get an error saying _Could not execute because the specified command or f
 - Debian and derived (Ubuntu, ...)
 - Arch Linux
 - Gentoo
+- Slackware
 
 Limitations:
 

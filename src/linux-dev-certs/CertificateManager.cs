@@ -137,6 +137,10 @@ partial class CertificateManager
             {
                 command = ["pacman", "-S", "-y", ..packagesToInstall];
             }
+            else if (OSFlavor.IsSlackLike)
+            {
+                command = ["slackpkg", "install", ..packagesToInstall];
+            }
             else
             {
                 command = [];
@@ -170,6 +174,10 @@ partial class CertificateManager
             else if (OSFlavor.IsArchLike)
             {
                 Console.Error.WriteLine($"    pacman -S {string.Join(", ", packagesToInstall)}");
+            }
+            else if (OSFlavor.IsSlackLike)
+            {
+                Console.Error.WriteLine($"    slackpkg install {string.Join(", ", packagesToInstall)}");
             }
             else
             {
