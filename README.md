@@ -22,6 +22,7 @@ If you get an error saying _Could not execute because the specified command or f
 - Arch Linux
 - Gentoo
 - Slackware
+- OpenSUSE Leap and SUSE Linux Enterprise Server (SLES).  Tumbleweed and SLED untested but expected to work.
 
 Limitations:
 

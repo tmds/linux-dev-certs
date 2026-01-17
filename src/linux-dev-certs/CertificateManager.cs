@@ -142,6 +142,10 @@ partial class CertificateManager
             {
                 command = ["slackpkg", "install", ..packagesToInstall];
             }
+            else if (OSFlavor.IsSUSELike)
+            {
+                command = ["zypper", "install", ..packagesToInstall];
+            }
             else
             {
                 command = [];
@@ -179,6 +183,10 @@ partial class CertificateManager
             else if (OSFlavor.IsSlackLike)
             {
                 Console.Error.WriteLine($"    slackpkg install {string.Join(", ", packagesToInstall)}");
+            }
+            else if (OSFlavor.IsSUSELike)
+            {
+                Console.Error.WriteLine($"    zypper install {string.Join(", ", packagesToInstall)}");
             }
             else
             {
