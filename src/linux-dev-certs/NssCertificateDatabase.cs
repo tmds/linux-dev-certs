@@ -69,6 +69,10 @@ internal class NssCertificateDatabase : ICertificateStore
         {
             return "mozilla-nss";
         }
+        else if(OSFlavor.IsSUSELike)
+        {
+            return "mozilla-nss-tools";
+        }
         else
         {
             OSFlavor.ThrowNotSupported();

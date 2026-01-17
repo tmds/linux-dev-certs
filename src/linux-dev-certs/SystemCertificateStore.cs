@@ -10,6 +10,7 @@ sealed class SystemCertificateStore : ICertificateStore
     private const string DebianFamilyCaSourceDirectory = "/usr/local/share/ca-certificates";
     private const string ArchFamilyCaSourceDirectory = "/etc/ca-certificates/trust-source/anchors/";
     private const string SlackFamilyCaSourceDirectory = "/usr/share/ca-certificates/mozilla/";
+    private const string SUSEFamilyCaSourceDirectory = "/usr/share/pki/trust/anchors/";
     public string Name => "System Certificates";
 
     public bool TryInstallCertificate(string name, X509Certificate2 certificate)
@@ -40,6 +41,17 @@ sealed class SystemCertificateStore : ICertificateStore
             certFilePath = $"{SlackFamilyCaSourceDirectory}/{name}.crt";
             trustCommand = ["update-ca-certificates"];
         }
+        else if (OSFlavor.IsSUSELike)
+        {
+            certFilePath = $"{SUSEFamilyCaSourceDirectory}/{name}.crt";
+
+            // Absolute since OpenSUSE/SLES do not include /usr/sbin in default PATH even for wheel users
+            trustCommand = ["/usr/sbin/update-ca-certificates"];
+
+            // OpenSUSE and SLES both also provide /usr/bin/trust in the base installation, but
+            // running this would miss any customization in /{etc,usr/lib}/ca-certificates/update.d
+            // trustCommand = ["trust", "extract-compat"];
+        }
         else
         {
             OSFlavor.ThrowNotSupported();
@@ -64,6 +76,10 @@ sealed class SystemCertificateStore : ICertificateStore
         {
             dependencies.Add(new Dependency("update-ca-certificates", "ca-certificates"));
         }
+        else if (OSFlavor.IsSUSELike)
+        {
+            dependencies.Add(new Dependency("/usr/sbin/update-ca-certificates", "ca-certificates"));
+        }
         else if (OSFlavor.IsArchLike)
         {
             dependencies.Add(new Dependency("trust", "p11-kit"));
@@ -75,5 +91,5 @@ sealed class SystemCertificateStore : ICertificateStore
     }
 
     public bool IsSupported
-        => OSFlavor.IsFedoraLike || OSFlavor.IsDebianLike || OSFlavor.IsArchLike || OSFlavor.IsSlackLike;
+        => OSFlavor.IsFedoraLike || OSFlavor.IsDebianLike || OSFlavor.IsArchLike || OSFlavor.IsSlackLike || OSFlavor.IsSUSELike;
 }
