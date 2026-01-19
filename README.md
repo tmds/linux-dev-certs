@@ -22,6 +22,7 @@ If you get an error saying _Could not execute because the specified command or f
 - Arch Linux
 - Gentoo
 - Slackware
+- SUSE Linux Enterprise Server (SLES) and derived (OpenSUSE Leap, SLED, ...)
 
 Limitations:
 

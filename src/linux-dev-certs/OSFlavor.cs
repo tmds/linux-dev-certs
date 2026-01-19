@@ -8,6 +8,7 @@ static class OSFlavor
     public static bool IsArchLike => MatchesId("arch");
     public static bool IsGentooLike => MatchesId("gentoo");
     public static bool IsSlackLike => MatchesId("slackware");
+    public static bool IsSUSELike => MatchesId("suse");
 
     private static string? _id;
     private static string[]? _idLike;
