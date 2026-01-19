@@ -44,13 +44,7 @@ sealed class SystemCertificateStore : ICertificateStore
         else if (OSFlavor.IsSUSELike)
         {
             certFilePath = $"{SUSEFamilyCaSourceDirectory}/{name}.crt";
-
-            // Absolute since OpenSUSE/SLES do not include /usr/sbin in default PATH even for wheel users
             trustCommand = ["/usr/sbin/update-ca-certificates"];
-
-            // OpenSUSE and SLES both also provide /usr/bin/trust in the base installation, but
-            // running this would miss any customization in /{etc,usr/lib}/ca-certificates/update.d
-            // trustCommand = ["trust", "extract-compat"];
         }
         else
         {
