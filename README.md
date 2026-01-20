@@ -1,3 +1,5 @@
+[![NuGet](https://img.shields.io/nuget/v/linux-dev-certs.svg)](https://www.nuget.org/packages/linux-dev-certs)
+
 The .NET `dotnet dev-certs` command that is part of the .NET SDK supports generating a development certificate on Linux [to some extent](https://learn.microsoft.com/en-us/aspnet/core/security/enforcing-ssl#linux-specific-considerations).
 
 This repo contains a .NET tool that supports additional distributions. Because the tool uses a CA-signed development certificate, the local HTTPS endpoint is trusted by a broader part of the system (browsers, tools, ...).
