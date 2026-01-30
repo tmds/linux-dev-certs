@@ -279,10 +279,23 @@ partial class CertificateManager
         {
             // RFC 5280 section 4.2.1.2
             var subjectKeyIdentifier = new X509SubjectKeyIdentifierExtension(request.PublicKey, X509SubjectKeyIdentifierHashAlgorithm.Sha256, critical: false);
-            // RFC 5280 section 4.2.1.1
-            var authorityKeyIdentifier = X509AuthorityKeyIdentifierExtension.CreateFromSubjectKeyIdentifier(subjectKeyIdentifier);
-
             request.CertificateExtensions.Add(subjectKeyIdentifier);
+
+            // RFC 5280 section 4.2.1.1 - AKI must point to issuer's SKI, not self
+            X509AuthorityKeyIdentifierExtension authorityKeyIdentifier;
+            if (issuerCert != null)
+            {
+                // For CA-signed certs: AKI = issuer's SKI
+                var issuerSki = issuerCert.Extensions.OfType<X509SubjectKeyIdentifierExtension>().FirstOrDefault();
+                authorityKeyIdentifier = issuerSki != null
+                    ? X509AuthorityKeyIdentifierExtension.CreateFromSubjectKeyIdentifier(issuerSki)
+                    : X509AuthorityKeyIdentifierExtension.CreateFromSubjectKeyIdentifier(subjectKeyIdentifier);
+            }
+            else
+            {
+                // For self-signed: AKI = own SKI
+                authorityKeyIdentifier = X509AuthorityKeyIdentifierExtension.CreateFromSubjectKeyIdentifier(subjectKeyIdentifier);
+            }
             request.CertificateExtensions.Add(authorityKeyIdentifier);
         }
 
