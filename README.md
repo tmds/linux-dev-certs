@@ -1,10 +1,20 @@
 [![NuGet](https://img.shields.io/nuget/v/linux-dev-certs.svg)](https://www.nuget.org/packages/linux-dev-certs)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/linux-dev-certs)](https://www.nuget.org/packages/linux-dev-certs)
+[![License](https://img.shields.io/github/license/tmds/linux-dev-certs)](https://github.com/tmds/linux-dev-certs/blob/main/LICENSE)
+
+# linux-dev-certs
 
 The .NET `dotnet dev-certs` command that is part of the .NET SDK supports generating a development certificate on Linux [to some extent](https://learn.microsoft.com/en-us/aspnet/core/security/enforcing-ssl#linux-specific-considerations).
 
 This repo contains a .NET tool that supports additional distributions. Because the tool uses a CA-signed development certificate, the local HTTPS endpoint is trusted by a broader part of the system (browsers, tools, ...).
 
-# Using
+### Sponsoring
+
+linux-dev-certs is open source and free to use under the MIT license. If your organization depends on it, please consider [sponsoring its maintenance](https://github.com/sponsors/tmds).
+
+This isn't a support contract or a license fee — the source stays open and the rules stay simple. Sponsoring is a small, predictable way to help sustain the work that goes into bug fixes, security updates, and new features.
+
+## Using
 
 **note** the tool uses `sudo` to update the system CA store and install required system tools.
 
@@ -17,7 +27,7 @@ You can add the `--no-deps` argument to stop the tool from installing system too
 
 If you get an error saying _Could not execute because the specified command or file was not found._, try adding the .NET tools folder to PATH: `PATH=$PATH:~/.dotnet/tools`.
 
-# Supported distros
+## Supported distros
 
 - Fedora and derived (RHEL, AlmaLinux, ...)
 - Debian and derived (Ubuntu, ...)
@@ -31,6 +41,6 @@ Limitations:
 - Ubuntu browsers are packaged as snaps. Snaps do not use system certificates. If the user uses a snap-based Firefox, the CA certificate is added to its certificate store. Other browsers are (currently) not configured.
 - On gentoo, binary versions of browsers do not support system certificates. If the user uses a binary-based Firefox/LibreWolf, the CA certificate is added to its certificate store. Other browsers are (currently) not configured.
 
-# How it works
+## How it works
 
 To work across a range of distro applications, the tool generates a CA certificate which is added to the system store. This CA certificate is used to create an ASP.NET Core developer certificate that will be picked up by ASP.NET Core. The private key of the CA certificate is not stored and therefore it can not be used to sign additional certificates.
